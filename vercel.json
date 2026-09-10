@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/player",
+      "destination": "/api/player.js"
+    }
+  ]
+}
