@@ -1,8 +1,15 @@
 {
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/api/player",
-      "destination": "/api/player.js"
+      "src": "api/player.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/player",
+      "dest": "api/player.js"
     }
   ]
 }
