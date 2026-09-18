@@ -1,7 +1,16 @@
-const { kv } = require('@vercel/kv');
+const Redis = require('ioredis');
+
+// Inisialisasi Redis client menggunakan REDIS_URL dari environment variable
+let redis;
+if (process.env.REDIS_URL) {
+  redis = new Redis(process.env.REDIS_URL);
+}
+
+const DB_KEY = 'gt_leaderboard';
+const VALID_TOKEN = process.env.API_SECRET_TOKEN || "token_rahasia_anda_123";
 
 module.exports = async function handler(req, res) {
-  // CORS Headers
+  // Set CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -11,8 +20,13 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const DB_KEY = 'gt_leaderboard';
-  const VALID_TOKEN = process.env.API_TOKEN || "token_rahasia_anda_123";
+  // Cek apakah REDIS_URL tersedia
+  if (!redis) {
+    return res.status(500).json({
+      status: 'error',
+      message: 'REDIS_URL belum diatur pada Environment Variable Vercel!'
+    });
+  }
 
   try {
     // ==========================================
@@ -33,7 +47,10 @@ module.exports = async function handler(req, res) {
       }
 
       const body = req.body || {};
-      let currentData = (await kv.get(DB_KEY)) || {};
+      
+      // Ambil data JSON lama dari Redis
+      const rawData = await redis.get(DB_KEY);
+      let currentData = rawData ? JSON.parse(rawData) : {};
 
       const processEntry = (item) => {
         if (!item.growid) return null;
@@ -60,8 +77,8 @@ module.exports = async function handler(req, res) {
         }
       });
 
-      // Simpan data terbaru ke Vercel KV
-      await kv.set(DB_KEY, currentData);
+      // Simpan kembali ke Redis sebagai string JSON
+      await redis.set(DB_KEY, JSON.stringify(currentData));
 
       return res.status(200).json({
         status: 'success',
@@ -71,10 +88,11 @@ module.exports = async function handler(req, res) {
     }
 
     // ==========================================
-    // 2. ENDPOINT GET: Ambil Data Leaderboard
+    // 2. ENDPOINT GET: Membaca Leaderboard
     // ==========================================
     if (req.method === 'GET') {
-      const currentData = (await kv.get(DB_KEY)) || {};
+      const rawData = await redis.get(DB_KEY);
+      const currentData = rawData ? JSON.parse(rawData) : {};
 
       const sortedLeaderboard = Object.values(currentData)
         .map((player) => {
@@ -96,11 +114,10 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ status: 'error', message: 'Method Not Allowed' });
 
   } catch (error) {
-    // Menangkap error jika koneksi KV gagal
-    console.error("Database Error:", error);
+    console.error("Redis Error:", error);
     return res.status(500).json({
       status: 'error',
-      message: 'Gagal terhubung ke database KV. Pastikan Vercel KV Storage sudah di-connect.',
+      message: 'Gagal terhubung ke Database Redis!',
       error: error.message
     });
   }
