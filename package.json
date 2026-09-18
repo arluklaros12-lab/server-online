@@ -5,5 +5,8 @@
   "main": "api/player.js",
   "scripts": {
     "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "@vercel/kv": "^1.0.0"
   }
 }
