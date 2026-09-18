@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   const DB_KEY = 'gt_leaderboard';
-  const VALID_TOKEN = process.env.API_SECRET_TOKEN || "token_rahasia_anda_123";
+  const VALID_TOKEN = process.env.API_TOKEN;
 
   // ==========================================
   // 1. ENDPOINT POST: Simpan / Update Data (Protected)
