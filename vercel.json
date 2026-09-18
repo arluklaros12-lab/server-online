@@ -4,12 +4,20 @@
     {
       "src": "api/player.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/leaderboard.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/player",
       "dest": "api/player.js"
+    },
+    {
+      "src": "/api/leaderboard",
+      "dest": "api/leaderboard.js"
     }
   ]
 }
