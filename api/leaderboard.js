@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+const { kv } = require('@vercel/kv');
 
 export default async function handler(req, res) {
   // CORS Headers
