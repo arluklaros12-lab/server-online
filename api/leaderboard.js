@@ -27,52 +27,79 @@ module.exports = async function handler(req, res) {
     // 1. ENDPOINT POST: Simpan / Update Data
     // ==========================================
     if (req.method === 'POST') {
-      const clientToken = 
-        req.headers['x-api-token'] || 
-        req.headers['authorization']?.replace('Bearer ', '') || 
-        req.query?.token || 
-        req.body?.token;
+  const clientToken =
+    req.headers['x-api-token'] ||
+    req.headers['authorization']?.replace('Bearer ', '') ||
+    req.query?.token ||
+    req.body?.token;
 
-      if (!clientToken || clientToken !== VALID_TOKEN) {
-        return res.status(401).json({ status: 'error', message: 'Token tidak valid!' });
-      }
+  if (!clientToken || clientToken !== VALID_TOKEN) {
+    return res.status(401).json({
+      status: 'error',
+      message: 'Token tidak valid!'
+    });
+  }
 
-      const body = req.body || {};
-      const rawData = await redis.get(DB_KEY);
-      let currentData = rawData ? JSON.parse(rawData) : {};
+  const body = req.body || {};
 
-      const processEntry = (item) => {
-        if (!item.growid) return null;
-        return {
-          growid: item.growid,
-          locks: {
-            lock_5980: Number(item.lock1) || 0,
-            lock_4428: Number(item.lock2) || 0,
-            lock_9640: Number(item.lock3) || 0
-          },
-          updatedAt: new Date().toISOString()
-        };
-      };
+  const rawData = await redis.get(DB_KEY);
+  let currentData = rawData ? JSON.parse(rawData) : {};
 
-      const itemsToProcess = Array.isArray(body) ? body : (body.data || [body]);
-      let updatedCount = 0;
+  const processEntry = (item) => {
+    if (!item || !item.growid) return null;
 
-      itemsToProcess.forEach((item) => {
-        const entry = processEntry(item);
-        if (entry) {
-          currentData[entry.growid.toLowerCase()] = entry;
-          updatedCount++;
-        }
-      });
+    return {
+      growid: String(item.growid),
 
-      await redis.set(DB_KEY, JSON.stringify(currentData));
+      locks: {
+        lock_5980: Number(item.lock1) || 0,
+        lock_4428: Number(item.lock2) || 0,
+        lock_9640: Number(item.lock3) || 0
+      },
 
-      return res.status(200).json({
-        status: 'success',
-        message: `Berhasil memperbarui ${updatedCount} pemain`,
-        totalPlayersStored: Object.keys(currentData).length
-      });
+      updatedAt: new Date().toISOString()
+    };
+  };
+
+  // ==========================================
+  // SUPPORT:
+  // 1. { leaderboard: [...] }
+  // 2. { data: [...] }
+  // 3. [...]
+  // 4. { growid, lock1, lock2, lock3 }
+  // ==========================================
+
+  const itemsToProcess =
+    Array.isArray(body)
+      ? body
+      : Array.isArray(body.leaderboard)
+        ? body.leaderboard
+        : Array.isArray(body.data)
+          ? body.data
+          : [body];
+
+  let updatedCount = 0;
+
+  itemsToProcess.forEach((item) => {
+    const entry = processEntry(item);
+
+    if (entry) {
+      currentData[entry.growid.toLowerCase()] = entry;
+      updatedCount++;
     }
+  });
+
+  await redis.set(
+    DB_KEY,
+    JSON.stringify(currentData)
+  );
+
+  return res.status(200).json({
+    status: 'success',
+    message: `Berhasil memperbarui ${updatedCount} pemain`,
+    totalPlayersStored: Object.keys(currentData).length
+  });
+}
 
     // ==========================================
     // 2. ENDPOINT GET: Membaca Leaderboard
