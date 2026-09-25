@@ -48,26 +48,27 @@ module.exports = async function handler(req, res) {
   const processEntry = (item) => {
     if (!item || !item.growid) return null;
 
+    const locks = {};
+
+    // Ambil semua data lock selain growid
+    for (const [key, value] of Object.entries(item)) {
+      if (key === 'growid' || key === 'token') continue;
+
+      locks[key] = Number(value) || 0;
+    }
+
     return {
       growid: String(item.growid),
-
-      locks: {
-        lock_5980: Number(item.lock1) || 0,
-        lock_4428: Number(item.lock2) || 0,
-        lock_9640: Number(item.lock3) || 0
-      },
-
+      locks,
       updatedAt: new Date().toISOString()
     };
   };
 
-  // ==========================================
-  // SUPPORT:
+  // Support:
   // 1. { leaderboard: [...] }
   // 2. { data: [...] }
   // 3. [...]
-  // 4. { growid, lock1, lock2, lock3 }
-  // ==========================================
+  // 4. { growid, BGL, GGL, CGL, FGL, BCA }
 
   const itemsToProcess =
     Array.isArray(body)
