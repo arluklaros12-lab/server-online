@@ -106,22 +106,31 @@ module.exports = async function handler(req, res) {
     // 2. ENDPOINT GET: Membaca Leaderboard
     // ==========================================
     if (req.method === 'GET') {
-      const rawData = await redis.get(DB_KEY);
-      const currentData = rawData ? JSON.parse(rawData) : {};
+  const rawData = await redis.get(DB_KEY);
+  const currentData = rawData ? JSON.parse(rawData) : {};
 
-      const sortedLeaderboard = Object.values(currentData)
-        .map((player) => {
-          const totalScore = player.locks.lock_5980 + player.locks.lock_4428 + player.locks.lock_9640;
-          return { ...player, totalScore };
-        })
-        .sort((a, b) => b.totalScore - a.totalScore);
+  const sortedLeaderboard = Object.values(currentData)
+    .map((player) => {
 
-      return res.status(200).json({
-        status: 'success',
-        totalPlayers: sortedLeaderboard.length,
-        leaderboard: sortedLeaderboard
-      });
-    }
+      // Hitung semua lock yang ada
+      const totalScore = Object.values(player.locks || {})
+        .reduce((total, value) => {
+          return total + (Number(value) || 0);
+        }, 0);
+
+      return {
+        ...player,
+        totalScore
+      };
+    })
+    .sort((a, b) => b.totalScore - a.totalScore);
+
+  return res.status(200).json({
+    status: 'success',
+    totalPlayers: sortedLeaderboard.length,
+    leaderboard: sortedLeaderboard
+  });
+}
 
     // ==========================================
     // 3. ENDPOINT DELETE: Hapus Data Player
